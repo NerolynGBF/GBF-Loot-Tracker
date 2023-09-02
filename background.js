@@ -2,7 +2,7 @@ const WINDOW_VERTICAL = { height: 978, width: 768 };
 const WINDOW_HORIZONTAL = { height: 978, width: 768 }
 
 chrome.action.onClicked.addListener(function (tab) {
-  chrome.windows.create(Object.assign({ url: "public.html?" + tab.id, type: "popup" }, WINDOW_HORIZONTAL));
+  chrome.windows.create(Object.assign({ url: "/src/html/public.html?" + tab.id, type: "popup" }, WINDOW_HORIZONTAL));
   
 });
 
