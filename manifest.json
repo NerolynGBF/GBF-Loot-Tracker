@@ -1,0 +1,13 @@
+{
+  "name": "GBF Drop Tracker",
+  "description": "Tracks drops from raids in the game Granblue Fantasy",
+  "version": "1.0",
+  "manifest_version": 3,
+  "action": {
+    "default_title": "Click to show an alert"
+  },
+  "permissions": ["debugger", "tabs", "storage", "unlimitedStorage"],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
