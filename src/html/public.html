@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <link href="/src/css/bootstrap.min.css" rel="stylesheet" />
+        <link href="/src/css/public.css" rel="stylesheet" />
         <meta charset="utf-8" />
         <meta
         name="viewport"
@@ -8,20 +10,36 @@
         />
         <meta name="theme-color" content="#000000" />
         <link rel="manifest" href="../../manifest.json" />
-        <link href="/src/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="/src/css/public.css" rel="stylesheet" />
         <title>GBF Loot Tracker</title>
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>
-        <table id="loot-table" class="table">
-            <tr>
-                <td>Image</td>
-                <td>Name</td>
-                <td>Amount</td>
-            </tr>
-        </table>
+        <div class="container text-center">
+            <div class="row mx-auto">
+                <h1 class="text-center">Raid count</h1>
+                <table class="table table-bordered">
+                    <thead>
+                        <td>Name</td>
+                        <td>Blue chests</td>
+                        <td>Amount</td>
+                    </thead>
+                    <tbody id="raid-table"></tbody>
+                </table>
+            </div>
+            <div class="row mx-auto">
+                <h1 class="text-center">Total loot</h1>
+                <table class="table table-bordered">
+                    <thead>
+                        <td>Image</td>
+                        <td>Name</td>
+                        <td>Amount</td>
+                    </thead>
+                    <tbody id="loot-table"></tbody>
+                </table>
+            </div>
+        </div>
         <script type="module" src="/src/js/network.js"></script>
-        <script src="/src/js/bootstrap.bundle.min.js" ></script>
+        <script src="/src/js/jquery-3.7.1.min.js" ></script>
+        <script src="/src/js/bootstrap.min.js" ></script>
     </body>
 </html>
