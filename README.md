@@ -18,7 +18,7 @@ A Chrome extension for tracking loot from raids in Granblue Fantasy. Stores data
 * Kill raids while keeping the extension open
 * Loot should populate automatically
 
-* I found a bug
+# I found a bug
 Yeah, probably. [Make an issue report in this repo](https://github.com/NerolynGBF/GBF-Loot-Tracker/issues/new). Please do your best to describe the circumstances of the bug(which raid, expected behavior, screenshots, etc.)
 
 If you need to get in contact with me for whatever reason, you can find me on Discord at granbluefantasy (Yes, that is actually my Discord username.)
