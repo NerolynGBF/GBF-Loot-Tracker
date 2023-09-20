@@ -12,6 +12,7 @@ async function main() {
   let rewards = await getStorage("rewards");
   let raid_history = await getStorage("raid_history");
   let raid_dict = await getStorage("raid_dict");
+  let requests = [];
   clearRowsFromTable("loot-table");
   addRowsToTable("loot-table", allRewardsToRow(rewards));
   buildRaidTable(raid_history);
@@ -19,7 +20,13 @@ async function main() {
     chrome.debugger.sendCommand({ tabId: tab_id }, "Network.enable");
     chrome.debugger.onEvent.addListener(function (source, method, params) {
       if (method === "Network.responseReceived") {
-        let url = params.response.url;
+        requests.push({
+          requestId: params.requestId,
+          url: params.response.url
+        });
+      }
+      else if (method === "Network.loadingFinished") {
+        let url = requests.find((x) => x.requestId === params.requestId).url;
         let new_rewards = [];
         let name = "";
         let blue_chested = false;
@@ -29,9 +36,11 @@ async function main() {
             "Network.getResponseBody",
             { requestId: params.requestId },
             function (response) {
-              let twitter = JSON.parse(response.body)["twitter"];
-              raid_dict[twitter["raid_id"]] = { name: twitter["monster"], raid_id: twitter["raid_id"], enemy_id: twitter["enemy_id"] };
-              setStorage("raid_dict", raid_dict)
+              if (response !== undefined) {
+                let twitter = JSON.parse(response.body)["twitter"];
+                raid_dict[twitter["raid_id"]] = { name: twitter["monster"], raid_id: twitter["raid_id"], enemy_id: twitter["enemy_id"] };
+                setStorage("raid_dict", raid_dict)
+              }
             });
         }
         else if (url.includes("resultmulti/data") || url.includes("result/data")) {
@@ -42,47 +51,49 @@ async function main() {
             "Network.getResponseBody",
             { requestId: params.requestId },
             function (response) {
-              let body = JSON.parse(response.body);
-              let list = body.rewards.reward_list;
-              
-              if (body["retry_quest_info"]) {
-                name = body["retry_quest_info"]["chapter_name"];
-                raid_dict[raid_id] = { name: body["retry_quest_info"]["chapter_name"], raid_id: raid_id, enemy_id: body["retry_quest_info"]["quest_id"] };
-                setStorage("raid_dict", raid_dict)
-              }
-              else if (raid_dict[raid_id]) {
-                name = raid_dict[raid_id].name;
-              }
+              if (response !== undefined) {
+                let body = JSON.parse(response.body);
+                let list = body.rewards.reward_list;
+                
+                if (body["retry_quest_info"] && url.includes("result/data")) {
+                  name = body["retry_quest_info"]["chapter_name"];
+                  raid_dict[raid_id] = { name: body["retry_quest_info"]["chapter_name"], raid_id: raid_id, enemy_id: body["retry_quest_info"]["quest_id"] };
+                  setStorage("raid_dict", raid_dict)
+                }
+                else if (raid_dict[raid_id]) {
+                  name = raid_dict[raid_id].name;
+                }
 
-              for (let [key, value] of Object.entries(list)) {
-                if (key == "11" && !Array.isArray(value)) {
-                  blue_chested = true;
+                for (let [key, value] of Object.entries(list)) {
+                  if (key == "11" && !Array.isArray(value)) {
+                    blue_chested = true;
+                  }
+                  for (let [_k, v] of Object.entries(value)) {
+                    new_rewards.push(parseReward(v));
+                  }
                 }
-                for (let [_k, v] of Object.entries(value)) {
-                  new_rewards.push(parseReward(v));
+                
+                rewards = addRewards(rewards, new_rewards);
+                clearRowsFromTable("loot-table");
+                addRowsToTable("loot-table", allRewardsToRow(rewards));
+                setStorage("rewards", rewards);
+                if(name!="") {
+                  if (!raid_history[name]) {
+                    raid_history[name] = {};
+                    raid_history[name]['rewards'] = {};
+                    raid_history[name]['kill_count'] = 0;
+                    raid_history[name]['blue_chest_count'] = 0;
+                    raid_history[name]['enemy_id'] = raid_dict[raid_id]['enemy_id'];
+                  }
+                  raid_history[name]['rewards'] = addRewards(raid_history[name]['rewards'], new_rewards);
+                  raid_history[name]['kill_count']+=1;
+                  if ( blue_chested ) { raid_history[name]['blue_chest_count']+=1 };
+                  clearRowsFromTable("raid-table");
+                  buildRaidTable(raid_history);
+                  delete raid_dict[raid_id];
+                  setStorage("raid_history", raid_history);
+                  setStorage("raid_dict", raid_dict)
                 }
-              }
-              
-              rewards = addRewards(rewards, new_rewards);
-              clearRowsFromTable("loot-table");
-              addRowsToTable("loot-table", allRewardsToRow(rewards));
-              setStorage("rewards", rewards);
-              if(name!="") {
-                if (!raid_history[name]) {
-                  raid_history[name] = {};
-                  raid_history[name]['rewards'] = {};
-                  raid_history[name]['kill_count'] = 0;
-                  raid_history[name]['blue_chest_count'] = 0;
-                  raid_history[name]['enemy_id'] = raid_dict[raid_id]['enemy_id'];
-                }
-                raid_history[name]['rewards'] = addRewards(raid_history[name]['rewards'], new_rewards);
-                raid_history[name]['kill_count']+=1;
-                if ( blue_chested ) { raid_history[name]['blue_chest_count']+=1 };
-                clearRowsFromTable("raid-table");
-                buildRaidTable(raid_history);
-                delete raid_dict[raid_id];
-                setStorage("raid_history", raid_history);
-                setStorage("raid_dict", raid_dict)
               }
             }
           );
@@ -99,6 +110,9 @@ function parseReward(reward) {
   result["id"] = reward["id"];
   result["rarity"] = reward["rarity"];
   result["type"] = reward["type"];
+  if (reward["thumbnail_img"]) {
+    result["thumbnail_img"] = reward["thumbnail_img"];
+  }
   return result;
 }
 
@@ -133,6 +147,9 @@ function addRewards(rewards, new_rewards) {
     id = reward["id"];
     if (result[id]) {
       result[id]["count"] = (parseInt(result[id]["count"]) || 0) + parseInt(reward["count"]);
+      if (reward["thumbnail_img"]) {
+        result[id]["thumbnail_img"] = reward["thumbnail_img"];
+      }
     }
     else {
       result[id] = reward;
@@ -163,7 +180,7 @@ function rewardToRow(reward, options = {}) {
     "<img src='https://prd-game-a1-granbluefantasy.akamaized.net/assets_en/img/sp/assets/" +
       reward["type"] +
       "/m/" +
-      reward["id"] +
+      (reward["thumbnail_img"] || reward["id"]) +
       ".jpg' width='54'></img>"
   );
   result.push(reward["name"]);
