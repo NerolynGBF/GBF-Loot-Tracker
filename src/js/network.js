@@ -43,7 +43,7 @@ async function main() {
               }
             });
         }
-        else if (url.includes("resultmulti/data") || url.includes("result/data")) {
+        else if (url.includes("resultmulti/data") || url.includes("result/data") || url.includes("resultmulti/") || url.includes("result/content")) {
           const regex = /(?!\/)\d+(?=\?)/gm;
           let raid_id = url.match(regex)[0];
           chrome.debugger.sendCommand(
@@ -52,12 +52,13 @@ async function main() {
             { requestId: params.requestId },
             function (response) {
               if (response !== undefined) {
-                let body = JSON.parse(response.body);
-                let list = body.rewards.reward_list;
                 
-                if (body["retry_quest_info"] && url.includes("result/data")) {
-                  name = body["retry_quest_info"]["chapter_name"];
-                  raid_dict[raid_id] = { name: body["retry_quest_info"]["chapter_name"], raid_id: raid_id, enemy_id: body["retry_quest_info"]["quest_id"] };
+                let body = JSON.parse(response.body).option;
+                let list = body.result_data.rewards.reward_list;
+                let retry_quest_info = body.result_data.retry_quest_info;
+                if (retry_quest_info && url.includes("result/content")) {
+                  name = retry_quest_info["chapter_name"];
+                  raid_dict[raid_id] = { name: retry_quest_info["chapter_name"], raid_id: raid_id, enemy_id: retry_quest_info["quest_id"] };
                   setStorage("raid_dict", raid_dict)
                 }
                 else if (raid_dict[raid_id]) {
